@@ -360,6 +360,46 @@ process.outerHTML =
   '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list"><p class="eyebrow gold">Upcoming Dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
 const SHOWS_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbzm7n06SI-AROY0SVsnnyTH-CJuevgodlFKZj2A1aPZCZ-5k6Fff1TEYCyvrjSq0ZY6/exec';
+const venueGroupTestEnabled =
+  new URLSearchParams(window.location.search).get('map-test') === 'venue-group';
+const venueGroupTestShows = [
+  {
+    approved: true,
+    id: 'venue-test-briella-baitbox',
+    artist: 'Briella Steiner',
+    venue: 'BaitBox',
+    city: 'Republican City',
+    state: 'Nebraska',
+    date: '2026-09-07',
+    time: '8pm',
+    latitude: 40.1014137,
+    longitude: -99.2211532,
+  },
+  {
+    approved: true,
+    id: 'venue-test-anthony-baitbox',
+    artist: 'Anthony Segovia',
+    venue: 'BaitBox',
+    city: 'Republican City',
+    state: 'Nebraska',
+    date: '2026-10-02',
+    time: '7pm',
+    latitude: 40.1014137,
+    longitude: -99.2211532,
+  },
+  {
+    approved: true,
+    id: 'venue-test-traynr-lincoln',
+    artist: 'The Traynr Band',
+    venue: 'Test Venue',
+    city: 'Lincoln',
+    state: 'Nebraska',
+    date: '2026-10-10',
+    time: '8pm',
+    latitude: 40.8136,
+    longitude: -96.7026,
+  },
+];
 const artistSlugs = {
   'Anthony Segovia': 'anthony-segovia',
   'The Traynr Band': 'the-traynr-band',
@@ -368,6 +408,14 @@ const artistSlugs = {
 };
 const mapEmpty = document.querySelector('.map-empty');
 const showDates = document.querySelector('.show-dates');
+if (venueGroupTestEnabled) {
+  document
+    .querySelector('.show-map-heading')
+    .insertAdjacentHTML(
+      'beforeend',
+      '<p class="map-test-notice">Test preview: sample overlapping shows are visible only through this link.</p>',
+    );
+}
 let approvedShows = [];
 let liveMap = null;
 let showMarkers = [];
@@ -642,7 +690,9 @@ const loadShows = async () => {
     );
     if (!response.ok) throw new Error('Schedule request failed');
     const payload = await response.json();
-    approvedShows = (Array.isArray(payload) ? payload : payload.shows || [])
+    const feedShows = Array.isArray(payload) ? payload : payload.shows || [];
+    approvedShows = feedShows
+      .concat(venueGroupTestEnabled ? venueGroupTestShows : [])
       .filter(
         (show) =>
           show.approved === true &&

@@ -1584,6 +1584,16 @@ footer {
   color: var(--muted);
   line-height: 1.6;
 }
+.map-test-notice {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 8px 11px;
+  border: 1px solid rgb(212 175 55 / 45%);
+  color: var(--gold) !important;
+  font: 700 11px/1.35 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
 .map-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.5fr);
