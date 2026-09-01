@@ -278,7 +278,6 @@ h1 {
   border-bottom: 1px solid var(--border);
   background: #0c0f10;
   color: #c4c8ca;
-  cursor: pointer;
   overflow: hidden;
   transition:
     background var(--fast),
@@ -293,9 +292,18 @@ h1 {
   background: #0f1315;
   color: #ece9e2;
 }
-.next-show-ticker:focus-visible {
+.next-show-ticker:focus-within {
   z-index: 4;
-  outline-offset: -4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.next-show-ticker:focus-within::-webkit-scrollbar {
+  display: none;
+}
+.next-show-ticker:focus-within .next-show-track {
+  animation: none;
+  transform: none;
+  will-change: auto;
 }
 .next-show-track {
   display: flex;
@@ -307,17 +315,31 @@ h1 {
 .next-show-loop {
   display: flex;
   flex: none;
+  align-items: stretch;
 }
 .next-show-item {
-  display: block;
+  display: flex;
   flex: none;
+  min-height: 48px;
   padding: 0 clamp(24px, 3vw, 48px);
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   white-space: nowrap;
   font:
     600 12px/1 'Barlow Condensed',
     sans-serif;
   letter-spacing: 0.13em;
   text-transform: uppercase;
+}
+.next-show-item:hover {
+  color: #fff;
+}
+.next-show-item:focus-visible {
+  z-index: 1;
+  outline-offset: -4px;
 }
 .next-show-item strong {
   color: var(--gold);
@@ -2360,24 +2382,26 @@ body.egg-open {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  .next-show-ticker {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .next-show-ticker::-webkit-scrollbar {
+    display: none;
+  }
   .next-show-track {
-    width: 100%;
-    justify-content: center;
+    width: max-content;
+    justify-content: flex-start;
     animation: none !important;
     transform: none !important;
     will-change: auto;
   }
   .next-show-loop {
-    width: 100%;
-    justify-content: center;
+    width: max-content;
+    justify-content: flex-start;
   }
   .next-show-loop:nth-child(2),
-  .next-show-item:not(:first-child) {
+  .next-show-repeat {
     display: none;
-  }
-  .next-show-item:first-child {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }

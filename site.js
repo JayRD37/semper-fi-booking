@@ -475,23 +475,10 @@ const normalizeShow = (show) => ({
 });
 const nextShowTicker = document.querySelector('#next-show');
 const nextShowLoops = [...nextShowTicker.querySelectorAll('.next-show-loop')];
-let currentNextShowId = '';
+let currentTickerSignature = '';
 let nextShowCountdownNodes = [];
 const showLocation = (show) =>
   [show.city, show.state].filter((value) => String(value || '').trim()).join(', ');
-const accessibleShowSchedule = (show) => {
-  const date = showDateValue(show.date);
-  const formattedDate = Number.isNaN(date.valueOf())
-    ? ''
-    : date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-  return [formattedDate, String(show.time || '').trim()]
-    .filter(Boolean)
-    .join(' at ');
-};
 const countdownText = (show) => {
   const remainingMinutes = Math.max(
     0,
@@ -502,71 +489,151 @@ const countdownText = (show) => {
   const minutes = remainingMinutes % 60;
   return `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;
 };
-const nextUpcomingShow = () =>
+const tickerSeriesId = (show) => {
+  const submittedSeries = String(show.seriesId || '').trim();
+  if (submittedSeries) return submittedSeries;
+  return String(show.id || '').match(/^(show-\d+)-\d+$/)?.[1] || show.id;
+};
+const tickerDateRange = (shows) => {
+  const dates = shows
+    .map((show) => showDateValue(show.date))
+    .filter((date) => !Number.isNaN(date.valueOf()))
+    .sort((a, b) => a - b);
+  if (!dates.length) return '';
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const month = (date) =>
+    date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  if (localDateKey(first) === localDateKey(last)) {
+    return `${month(first)} ${first.getDate()}`;
+  }
+  if (
+    first.getFullYear() === last.getFullYear() &&
+    first.getMonth() === last.getMonth()
+  ) {
+    return `${month(first)} ${first.getDate()}–${last.getDate()}`;
+  }
+  const firstYear = first.getFullYear() === last.getFullYear() ? '' : ` ${first.getFullYear()}`;
+  return `${month(first)} ${first.getDate()}${firstYear}–${month(last)} ${last.getDate()}`;
+};
+const upcomingTickerSeries = () => {
+  const groups = new Map();
   approvedShows
     .map(normalizeShow)
-    .filter((show) => show.approved === true && show.status === 'upcoming')
+    .filter((show) => show.approved === true)
+    .forEach((show) => {
+      const seriesId = tickerSeriesId(show);
+      if (!groups.has(seriesId)) groups.set(seriesId, []);
+      groups.get(seriesId).push(show);
+    });
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + 14);
+  cutoff.setHours(23, 59, 59, 999);
+  return [...groups.entries()]
+    .map(([id, shows]) => {
+      const orderedShows = [...shows].sort(
+        (a, b) => showStartValue(a) - showStartValue(b),
+      );
+      const upcomingShows = orderedShows.filter(
+        (show) => show.status === 'upcoming',
+      );
+      return {
+        id,
+        shows: orderedShows,
+        nextShow: upcomingShows[0] || null,
+      };
+    })
+    .filter(
+      (series) =>
+        series.nextShow && showStartValue(series.nextShow) <= cutoff,
+    )
     .sort(
       (a, b) =>
-        showStartValue(a) - showStartValue(b) || String(a.id).localeCompare(String(b.id)),
-    )[0] || null;
-const buildTickerItem = (show, countdown) => {
-  const item = document.createElement('span');
+        showStartValue(a.nextShow) - showStartValue(b.nextShow) ||
+        String(a.id).localeCompare(String(b.id)),
+    );
+};
+const buildTickerItem = (series, interactive, isNext) => {
+  const show = series.nextShow;
+  const item = document.createElement(interactive ? 'button' : 'span');
+  if (interactive) item.type = 'button';
   item.className = 'next-show-item';
+  item.dataset.tickerShowId = show.id;
+  if (!interactive) {
+    item.classList.add('next-show-repeat');
+    item.tabIndex = -1;
+    item.setAttribute('aria-hidden', 'true');
+  }
   const label = document.createElement('strong');
-  label.textContent = 'Next Show';
+  label.textContent = isNext ? 'Next Show' : 'Coming Up';
   item.append(label);
-  [show.artistName, show.venue, showLocation(show)]
+  [show.artistName, show.venue, showLocation(show), tickerDateRange(series.shows)]
     .filter((value) => String(value || '').trim())
     .forEach((value) => item.append(` • ${value}`));
   const countdownNode = document.createElement('span');
   countdownNode.className = 'next-show-countdown';
-  countdownNode.textContent = ` • ${countdown}`;
+  countdownNode.textContent = ` • ${countdownText(show)}`;
   item.append(countdownNode, ' •');
-  nextShowCountdownNodes.push(countdownNode);
+  nextShowCountdownNodes.push({ node: countdownNode, show });
+  const venue = String(show.venue || '').trim();
+  const location = showLocation(show);
+  const dateRange = tickerDateRange(series.shows);
+  item.setAttribute(
+    'aria-label',
+    `View ${show.artistName}${venue ? ` at ${venue}` : ''}${location ? ` in ${location}` : ''}${dateRange ? `, ${dateRange}` : ''} on the map`,
+  );
   return item;
 };
 const updateNextShowTicker = (forceLayout = false) => {
-  const show = nextUpcomingShow();
-  if (!show) {
-    currentNextShowId = '';
+  const series = upcomingTickerSeries();
+  if (!series.length) {
+    currentTickerSignature = '';
     nextShowCountdownNodes = [];
     nextShowTicker.hidden = true;
     return;
   }
-  const countdown = countdownText(show);
-  if (forceLayout || currentNextShowId !== show.id || nextShowTicker.hidden) {
-    currentNextShowId = show.id;
+  const signature = series
+    .map(
+      (item) =>
+        `${item.id}:${item.nextShow.id}:${item.shows
+          .map((show) => `${show.id}:${show.date}:${show.time || ''}`)
+          .join(',')}`,
+    )
+    .join('|');
+  if (forceLayout || currentTickerSignature !== signature || nextShowTicker.hidden) {
+    currentTickerSignature = signature;
     nextShowCountdownNodes = [];
     nextShowTicker.hidden = false;
-    nextShowLoops[0].replaceChildren(buildTickerItem(show, countdown));
-    const itemWidth =
-      nextShowLoops[0].firstElementChild?.getBoundingClientRect().width || 600;
+    nextShowLoops[0].replaceChildren(
+      ...series.map((item, index) => buildTickerItem(item, true, index === 0)),
+    );
+    const sequenceWidth = nextShowLoops[0].scrollWidth || 600;
     const repeatCount = Math.max(
-      2,
-      Math.ceil(nextShowTicker.clientWidth / itemWidth) + 1,
+      1,
+      Math.ceil(nextShowTicker.clientWidth / sequenceWidth) + 1,
     );
     nextShowCountdownNodes = [];
-    nextShowLoops.forEach((loop) => {
-      loop.replaceChildren(
-        ...Array.from({ length: repeatCount }, () =>
-          buildTickerItem(show, countdown),
-        ),
-      );
+    nextShowLoops.forEach((loop, loopIndex) => {
+      const items = [];
+      for (let repeat = 0; repeat < repeatCount; repeat += 1) {
+        series.forEach((item, index) => {
+          items.push(
+            buildTickerItem(
+              item,
+              loopIndex === 0 && repeat === 0,
+              index === 0,
+            ),
+          );
+        });
+      }
+      loop.replaceChildren(...items);
     });
     const loopWidth = nextShowLoops[0].scrollWidth;
     const duration = Math.min(40, Math.max(25, loopWidth / 90));
     nextShowTicker.style.setProperty('--next-show-duration', `${duration}s`);
-    const venue = String(show.venue || '').trim();
-    const location = showLocation(show);
-    const schedule = accessibleShowSchedule(show);
-    nextShowTicker.setAttribute(
-      'aria-label',
-      `View next show: ${show.artistName}${venue ? ` at ${venue}` : ''}${location ? ` in ${location}` : ''}${schedule ? ` on ${schedule}` : ''} on the map`,
-    );
   } else {
-    nextShowCountdownNodes.forEach((node) => {
-      node.textContent = ` • ${countdown}`;
+    nextShowCountdownNodes.forEach(({ node, show }) => {
+      node.textContent = ` • ${countdownText(show)}`;
     });
   }
 };
@@ -1090,10 +1157,10 @@ const renderShows = () => {
     liveMap.fitBounds(mapBounds, { padding: 40, maxZoom: 9 });
   }
 };
-const focusTickerShowOnMap = () => {
+const focusTickerShowOnMap = (showId) => {
   const show = approvedShows
     .map(normalizeShow)
-    .find((candidate) => candidate.id === currentNextShowId);
+    .find((candidate) => candidate.id === showId);
   if (!show || show.status !== 'upcoming') {
     updateNextShowTicker();
     return;
@@ -1122,6 +1189,9 @@ const focusTickerShowOnMap = () => {
       liveMap.flyTo({ center, zoom: 12 });
       if (marker && !marker.getPopup().isOpen()) marker.togglePopup();
       requestAnimationFrame(() => {
+        document
+          .querySelectorAll('.ticker-focused-show')
+          .forEach((row) => row.classList.remove('ticker-focused-show'));
         const popupRow = [...document.querySelectorAll('[data-show-id]')].find(
           (row) => row.dataset.showId === show.id,
         );
@@ -1131,7 +1201,24 @@ const focusTickerShowOnMap = () => {
     reduceMotion ? 0 : 450,
   );
 };
-nextShowTicker.addEventListener('click', focusTickerShowOnMap);
+nextShowTicker.addEventListener('click', (event) => {
+  const item = event.target.closest('[data-ticker-show-id]');
+  if (!item) return;
+  focusTickerShowOnMap(item.dataset.tickerShowId);
+});
+nextShowTicker.addEventListener('focusin', (event) => {
+  const item = event.target.closest('.next-show-item');
+  if (!item) return;
+  requestAnimationFrame(() => {
+    const left = item.offsetLeft - (nextShowTicker.clientWidth - item.clientWidth) / 2;
+    nextShowTicker.scrollTo({ left: Math.max(0, left), behavior: 'auto' });
+  });
+});
+nextShowTicker.addEventListener('focusout', () => {
+  requestAnimationFrame(() => {
+    if (!nextShowTicker.contains(document.activeElement)) nextShowTicker.scrollLeft = 0;
+  });
+});
 document
   .querySelectorAll('[data-artist-filter]')
   .forEach((box) => box.addEventListener('change', renderShows));

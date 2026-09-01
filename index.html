@@ -25,8 +25,8 @@
       content="Artist booking for venues, festivals, and events."
     />
     <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="app/globals.css?v=shows18" />
-    <script src="site.js?v=shows18" defer></script>
+    <link rel="stylesheet" href="app/globals.css?v=shows19" />
+    <script src="site.js?v=shows19" defer></script>
   </head>
   <body>
     <main>
@@ -95,18 +95,18 @@
         </div>
         <a class="scroll-cue" href="#who-we-are"><span></span>Explore</a>
       </section>
-      <button
+      <div
         id="next-show"
         class="next-show-ticker"
-        type="button"
-        aria-label="View the next show on the map"
+        role="region"
+        aria-label="Shows in the next two weeks"
         hidden
       >
-        <span class="next-show-track" aria-hidden="true">
-          <span class="next-show-loop"></span>
-          <span class="next-show-loop"></span>
-        </span>
-      </button>
+        <div class="next-show-track">
+          <div class="next-show-loop"></div>
+          <div class="next-show-loop" aria-hidden="true"></div>
+        </div>
+      </div>
       <section id="who-we-are" class="section philosophy">
         <div class="section-heading">
           <p class="eyebrow gold">About Semper Fi</p>
