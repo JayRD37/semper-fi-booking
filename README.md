@@ -17,7 +17,7 @@ The approved public phone number is `(402) 304-7059` / `+14023047059`.
 
 ## Booking inquiries
 
-The booking form keeps an in-progress draft in the visitor's browser and sends completed inquiries to `semperfibooking@outlook.com` through FormSubmit. The form includes spam protection and requires a one-time FormSubmit activation from that mailbox before delivery begins.
+The booking form keeps an in-progress draft in the visitor's browser and sends completed inquiries to `semperfibooking@outlook.com` through the Semper Fi Google Apps Script backend. The form includes a honeypot field and duplicate-submission protection; it does not require access to the Outlook mailbox for activation.
 
 ## Publishing
 
