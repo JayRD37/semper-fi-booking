@@ -394,6 +394,57 @@ const artistSlugs = {
 const mapEmpty = document.querySelector('.map-empty');
 const showDates = document.querySelector('.show-dates');
 const showList = document.querySelector('.show-list');
+const mapDetailsDialog = document.createElement('dialog');
+mapDetailsDialog.className = 'map-details-dialog';
+mapDetailsDialog.setAttribute('aria-label', 'Show details');
+mapDetailsDialog.innerHTML =
+  '<div class="map-details-panel"><button type="button" class="map-details-close" aria-label="Close show details">×</button><div class="map-details-body"></div></div>';
+document.body.append(mapDetailsDialog);
+const mapDetailsBody = mapDetailsDialog.querySelector('.map-details-body');
+const mapDetailsClose = mapDetailsDialog.querySelector('.map-details-close');
+let mapDetailsReturnFocus = null;
+let mapDetailsReturnShowId = '';
+const closeMapDetails = () => {
+  if (mapDetailsDialog.open) mapDetailsDialog.close();
+};
+const openMapDetails = (
+  html,
+  focusedShowId = '',
+  returnFocus = document.activeElement,
+) => {
+  mapDetailsReturnFocus = returnFocus instanceof Element ? returnFocus : null;
+  mapDetailsReturnShowId = focusedShowId;
+  mapDetailsBody.innerHTML = html;
+  if (focusedShowId) {
+    const focusedRow = [...mapDetailsBody.querySelectorAll('[data-show-id]')].find(
+      (row) => row.dataset.showId === focusedShowId,
+    );
+    focusedRow?.classList.add('ticker-focused-show');
+  }
+  if (!mapDetailsDialog.open) mapDetailsDialog.showModal();
+  mapDetailsBody.scrollTop = 0;
+  mapDetailsClose.focus({ preventScroll: true });
+};
+mapDetailsClose.addEventListener('click', closeMapDetails);
+mapDetailsDialog.addEventListener('close', () => {
+  requestAnimationFrame(() => {
+    const replacementCard = mapDetailsReturnShowId
+      ? document.getElementById(mapDetailsReturnShowId)
+      : null;
+    const replacementMarker = mapDetailsReturnShowId
+      ? showMarkerById.get(mapDetailsReturnShowId)?.getElement()
+      : null;
+    const returnTarget = mapDetailsReturnFocus?.isConnected
+      ? mapDetailsReturnFocus
+      : replacementCard || replacementMarker || document.querySelector('#live-show-map canvas');
+    returnTarget?.focus?.({ preventScroll: true });
+    mapDetailsReturnFocus = null;
+    mapDetailsReturnShowId = '';
+  });
+});
+mapDetailsDialog.addEventListener('click', (event) => {
+  if (event.target === mapDetailsDialog) closeMapDetails();
+});
 const mobileShowList = window.matchMedia('(max-width: 800px)');
 let showListTouchCount = 0;
 let showListTouchY = 0;
@@ -475,10 +526,10 @@ let approvedShows = [];
 let liveMap = null;
 let showMarkers = [];
 const showMarkerById = new Map();
+const showDetailsById = new Map();
 let showPastShows = false;
 let pastFadeTimer = null;
 let pastHoverPopup = null;
-let activePastPopup = null;
 const pastFeatureGroups = new Map();
 const pastShowsToggle = document.querySelector('[data-past-shows-toggle]');
 const pastLocationSelect = document.querySelector('[data-past-location-select]');
@@ -861,11 +912,7 @@ const addPastShowLayers = () => {
     const group = pastFeatureGroups.get(feature?.properties?.historyId);
     if (!feature || !group) return;
     pastHoverPopup?.remove();
-    activePastPopup?.remove();
-    activePastPopup = new maplibregl.Popup({ offset: 13, maxWidth: '330px' })
-      .setLngLat(feature.geometry.coordinates)
-      .setHTML(pastPopupHtml(group))
-      .addTo(liveMap);
+    openMapDetails(pastPopupHtml(group), '', liveMap.getCanvas());
   });
   liveMap.on('mouseenter', PAST_POINT_LAYER, (event) => {
     liveMap.getCanvas().style.cursor = 'pointer';
@@ -1063,8 +1110,6 @@ const renderShows = () => {
   if (!liveMap) return;
   pastHoverPopup?.remove();
   pastHoverPopup = null;
-  activePastPopup?.remove();
-  activePastPopup = null;
   const enabled = enabledArtists();
   const artistVisible = approvedShows
     .map(normalizeShow)
@@ -1091,6 +1136,7 @@ const renderShows = () => {
   showMarkers.forEach((marker) => marker.remove());
   showMarkers = [];
   showMarkerById.clear();
+  showDetailsById.clear();
   showDates.replaceChildren();
   mapEmpty.hidden = visible.length > 0 || (showPastShows && pastFeatures.length > 0);
   if (!visible.length && !(showPastShows && pastFeatures.length)) {
@@ -1171,24 +1217,21 @@ const renderShows = () => {
         ),
       )
       .join('');
-    const popup = new maplibregl.Popup({ offset: 30, maxWidth: '330px' }).setHTML(
-      `<div class="venue-popup"><strong>${escapeHtml(venueLabel)}</strong><span class="venue-popup-location">${escapeHtml(location)}</span><ul>${popupRows}</ul></div>`,
-    );
+    const popupHtml = `<div class="venue-popup"><strong>${escapeHtml(venueLabel)}</strong><span class="venue-popup-location">${escapeHtml(location)}</span><ul>${popupRows}</ul></div>`;
     const marker = new maplibregl.Marker({
       element: markerElement,
       anchor: 'bottom',
     })
       .setLngLat([longitude, latitude])
-      .setPopup(popup)
       .addTo(liveMap);
-    const firstCard = showCards.get(firstShow.id);
     markerElement.addEventListener('click', () =>
-      firstCard?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      openMapDetails(popupHtml, firstShow.id, markerElement),
     );
     showMarkers.push(marker);
     group.shows.forEach((show) => {
       const card = showCards.get(show.id);
       showMarkerById.set(show.id, marker);
+      showDetailsById.set(show.id, popupHtml);
       if (!card) return;
       card.classList.add('show-date-map-link');
       card.tabIndex = 0;
@@ -1205,7 +1248,7 @@ const renderShows = () => {
           return;
         if (event.type === 'keydown') event.preventDefault();
         liveMap.flyTo({ center: [longitude, latitude], zoom: 12 });
-        if (!marker.getPopup().isOpen()) marker.togglePopup();
+        openMapDetails(popupHtml, show.id, card);
       };
       card.addEventListener('click', focusShow);
       card.addEventListener('keydown', focusShow);
@@ -1257,16 +1300,8 @@ const focusTickerShowOnMap = (showId) => {
         : [coordinates.longitude, coordinates.latitude];
       liveMap.resize();
       liveMap.flyTo({ center, zoom: 12 });
-      if (marker && !marker.getPopup().isOpen()) marker.togglePopup();
-      requestAnimationFrame(() => {
-        document
-          .querySelectorAll('.ticker-focused-show')
-          .forEach((row) => row.classList.remove('ticker-focused-show'));
-        const popupRow = [...document.querySelectorAll('[data-show-id]')].find(
-          (row) => row.dataset.showId === show.id,
-        );
-        popupRow?.classList.add('ticker-focused-show');
-      });
+      const details = showDetailsById.get(show.id);
+      if (details) openMapDetails(details, show.id);
     },
     reduceMotion ? 0 : 450,
   );
@@ -1302,12 +1337,8 @@ pastLocationSelect.addEventListener('change', () => {
   const group = pastFeatureGroups.get(pastLocationSelect.value);
   if (!group?.coordinates) return;
   const center = [group.coordinates.longitude, group.coordinates.latitude];
-  activePastPopup?.remove();
-  activePastPopup = new maplibregl.Popup({ offset: 13, maxWidth: '330px' })
-    .setLngLat(center)
-    .setHTML(pastPopupHtml(group))
-    .addTo(liveMap);
   liveMap.flyTo({ center, zoom: 11 });
+  openMapDetails(pastPopupHtml(group), '', pastLocationSelect);
 });
 const loadShows = async () => {
   try {

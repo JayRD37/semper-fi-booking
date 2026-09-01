@@ -2055,6 +2055,58 @@ footer {
 .map-canvas .maplibregl-popup-tip {
   border-top-color: #111517;
 }
+.map-details-dialog {
+  width: min(430px, calc(100vw - 28px));
+  max-width: none;
+  max-height: min(76vh, 640px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgb(212 175 55 / 55%);
+  background: #111517;
+  color: #fff;
+  box-shadow: 0 28px 90px rgb(0 0 0 / 85%);
+  overflow: hidden;
+}
+.map-details-dialog::backdrop {
+  background: rgb(3 5 6 / 72%);
+  backdrop-filter: blur(4px);
+}
+.map-details-panel {
+  position: relative;
+}
+.map-details-body {
+  max-height: min(76vh, 640px);
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--gold) #171b1d;
+  scrollbar-width: thin;
+}
+.map-details-body .venue-popup > strong {
+  padding-right: 48px;
+}
+.map-details-close {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 50%;
+  background: #0a0d0e;
+  color: #fff;
+  cursor: pointer;
+  font: 400 24px/1 Arial, sans-serif;
+}
+.map-details-close:hover,
+.map-details-close:focus-visible {
+  border-color: var(--gold);
+  color: var(--gold);
+}
 .map-canvas .maplibregl-ctrl-group {
   background: #111517;
 }
