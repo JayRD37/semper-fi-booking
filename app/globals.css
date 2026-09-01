@@ -1712,9 +1712,12 @@ footer {
     min-height: 400px;
   }
   .show-list {
-    height: 400px;
+    height: auto;
     border-left: 0;
     border-top: 1px solid var(--border);
+    overflow: visible;
+    overscroll-behavior: auto;
+    scrollbar-gutter: auto;
   }
 }
 .artist-filters {

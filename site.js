@@ -473,6 +473,8 @@ const initMap = async () => {
     style: 'https://tiles.openfreemap.org/styles/dark',
     center: [-98, 41.5],
     zoom: 4,
+    cooperativeGestures:
+      window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0,
   });
   liveMap.addControl(new maplibregl.NavigationControl(), 'top-left');
 };
