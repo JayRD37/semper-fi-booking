@@ -1720,11 +1720,31 @@ footer {
     scrollbar-gutter: auto;
   }
 }
+.map-filter-groups {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 22px;
+}
+.map-filter-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.map-filter-group legend {
+  margin-bottom: 9px;
+  color: #969da1;
+  font: 700 11px/1 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 .artist-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 0 0 22px;
+  margin: 0;
 }
 .artist-filters label {
   display: flex;
@@ -1772,6 +1792,120 @@ footer {
 .artist-filters label:has(input:focus-visible) {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
+}
+.history-filter {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+.past-shows-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  background: #0c0f10;
+  color: #fff;
+  cursor: pointer;
+  font: 600 13px 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.04em;
+}
+.past-shows-toggle b {
+  min-width: 20px;
+  color: #7f878b;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.past-shows-track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border: 1px solid #656b6f;
+  border-radius: 999px;
+  background: #080a0b;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+}
+.past-shows-track i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8b9296;
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+.past-shows-toggle[aria-checked='true'] {
+  border-color: rgb(180 162 196 / 62%);
+}
+.past-shows-toggle[aria-checked='true'] .past-shows-track {
+  border-color: #ab9cbb;
+  background: rgb(147 134 163 / 22%);
+}
+.past-shows-toggle[aria-checked='true'] .past-shows-track i {
+  background: #b8aac6;
+  transform: translateX(16px);
+}
+.past-shows-toggle[aria-checked='true'] b {
+  color: #c9bed2;
+}
+.past-shows-toggle:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+.past-location-select {
+  width: 100%;
+  max-width: 300px;
+  min-height: 40px;
+  padding: 0 34px 0 11px;
+  border: 1px solid rgb(180 162 196 / 42%);
+  border-radius: 0;
+  background: #0c0f10;
+  color: #e5e0e8;
+  font: 600 12px 'Barlow Condensed', sans-serif;
+}
+.past-location-select:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+@media (max-width: 800px) {
+  .map-filter-groups {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .artist-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .artist-filters label {
+    min-height: 42px;
+    padding: 0 10px;
+  }
+  .past-shows-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .past-shows-toggle b {
+    margin-left: auto;
+  }
+  .map-canvas .maplibregl-popup-content {
+    width: min(300px, calc(100vw - 42px));
+    max-height: min(380px, calc(100vh - 100px));
+    padding: 15px;
+  }
+}
+@media (max-width: 420px) {
+  .artist-filters {
+    grid-template-columns: 1fr;
+  }
 }
 .live-show-map {
   position: absolute;
@@ -1922,6 +2056,34 @@ footer {
   color: var(--artist-color, #fff);
   font: 700 15px/1.2 'Barlow Condensed', sans-serif;
 }
+.show-status {
+  display: block;
+  margin-bottom: 4px;
+  color: #afa1bc;
+  font: 700 9px/1 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.upcoming-status {
+  color: var(--gold);
+}
+.past-show-row {
+  opacity: 0.74;
+}
+.past-show-tooltip strong,
+.past-show-tooltip span {
+  display: block;
+}
+.past-show-tooltip strong {
+  color: #c8bdd2;
+  font: 700 14px/1.2 'Barlow Condensed', sans-serif;
+  text-transform: uppercase;
+}
+.past-show-tooltip span {
+  margin-top: 3px;
+  color: #d2d5d6;
+  font-size: 11px;
+}
 .venue-popup-venue,
 .venue-popup time {
   margin-top: 3px;
@@ -1973,6 +2135,10 @@ footer {
     opacity: 0.55;
     transform: scale(1.55);
     box-shadow: 0 0 7px var(--marker-color);
+  }
+  .past-shows-track,
+  .past-shows-track i {
+    transition: none;
   }
 }
 .map-empty {

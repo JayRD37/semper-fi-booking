@@ -342,7 +342,7 @@ document.querySelectorAll('a[href="#about"]').forEach((link) => {
 });
 const process = document.querySelector('.process');
 process.outerHTML =
-  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list"><p class="eyebrow gold">Upcoming Dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
+  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="map-filter-groups"><fieldset class="map-filter-group"><legend>Artists</legend><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label></div></fieldset><fieldset class="map-filter-group history-filter"><legend>History</legend><button type="button" class="past-shows-toggle" data-past-shows-toggle role="switch" aria-checked="false" aria-label="Show past shows"><span class="past-shows-track" aria-hidden="true"><i></i></span><span>Past Shows</span><b>Off</b></button><select class="past-location-select" data-past-location-select aria-label="Choose a past show location" hidden><option value="">Choose a past location…</option></select></fieldset></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming and past shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list"><p class="eyebrow gold">Upcoming Dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
 const SHOWS_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbzm7n06SI-AROY0SVsnnyTH-CJuevgodlFKZj2A1aPZCZ-5k6Fff1TEYCyvrjSq0ZY6/exec';
 const venueGroupTestEnabled =
@@ -405,6 +405,18 @@ let approvedShows = [];
 let liveMap = null;
 let showMarkers = [];
 const showMarkerById = new Map();
+let showPastShows = false;
+let pastFadeTimer = null;
+let pastHoverPopup = null;
+let activePastPopup = null;
+const pastFeatureGroups = new Map();
+const pastShowsToggle = document.querySelector('[data-past-shows-toggle]');
+const pastLocationSelect = document.querySelector('[data-past-location-select]');
+const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
+const PAST_SHOW_SOURCE = 'past-show-history';
+const PAST_CLUSTER_LAYER = 'past-show-clusters';
+const PAST_CLUSTER_COUNT_LAYER = 'past-show-cluster-count';
+const PAST_POINT_LAYER = 'past-show-points';
 const escapeHtml = (value) =>
   String(value ?? '').replace(
     /[&<>'"]/g,
@@ -413,23 +425,27 @@ const escapeHtml = (value) =>
         char
       ],
   );
-const showDateValue = (value) => {
+const localDateKey = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const showDateKey = (value) => {
   const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return match
-    ? new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-        23,
-        59,
-        59,
-      )
-    : new Date(value);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
 };
-const isUpcoming = (show) => {
-  const date = showDateValue(show.date);
-  return !Number.isNaN(date.valueOf()) && date >= new Date();
+const showDateValue = (value) => {
+  const key = showDateKey(value);
+  if (!key) return new Date(NaN);
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day, 12);
 };
+const showStatus = (show) =>
+  showDateKey(show.date) < localDateKey() ? 'past' : 'upcoming';
+const normalizeShow = (show) => ({
+  ...show,
+  artistId: artistSlugs[show.artist] || '',
+  artistName: show.artist || '',
+  date: showDateKey(show.date),
+  status: showStatus(show),
+});
 const formatShowDate = (value) =>
   showDateValue(value).toLocaleDateString('en-US', {
     month: 'short',
@@ -466,6 +482,153 @@ const loadMapLibrary = () =>
     script.onerror = reject;
     document.head.append(script);
   });
+const markerColorExpression = [
+  'match',
+  ['get', 'artistId'],
+  'briella-steiner',
+  '#ff5fa2',
+  'the-wicked',
+  '#e3262e',
+  'the-traynr-band',
+  '#d4af37',
+  'anthony-segovia',
+  '#4da3ff',
+  '#9386a3',
+];
+const setPastLayerVisibility = (opacity) => {
+  if (!liveMap?.getLayer(PAST_POINT_LAYER)) return;
+  liveMap.setPaintProperty(PAST_POINT_LAYER, 'circle-opacity', opacity * 0.52);
+  liveMap.setPaintProperty(PAST_CLUSTER_LAYER, 'circle-opacity', opacity * 0.38);
+  liveMap.setPaintProperty(PAST_CLUSTER_COUNT_LAYER, 'text-opacity', opacity * 0.78);
+};
+const pastPopupHtml = (group, compact = false) => {
+  const shows = [...group.shows].sort(
+    (a, b) => showDateValue(b.date) - showDateValue(a.date),
+  );
+  const firstShow = shows[0];
+  const venueNames = [...new Set(shows.map((show) => show.venue).filter(Boolean))];
+  const venueLabel = venueNames.length === 1 ? venueNames[0] : 'Shows at this location';
+  const location = `${firstShow.city || ''}, ${firstShow.state || ''}`.replace(
+    /^, |, $/g,
+    '',
+  );
+  if (compact) {
+    const artists = [...new Set(shows.map((show) => show.artistName))];
+    return `<div class="past-show-tooltip"><strong>Past ${shows.length === 1 ? 'show' : `${shows.length} shows`}</strong><span>${escapeHtml(artists.join(', '))}</span>${venueLabel ? `<span>${escapeHtml(venueLabel)}</span>` : ''}</div>`;
+  }
+  const rows = shows
+    .map((show) => {
+      const showVenue = venueNames.length > 1 && show.venue
+        ? `<span class="venue-popup-venue">${escapeHtml(show.venue)}</span>`
+        : '';
+      return `<li class="past-show-row"><span class="show-status">Past show</span><span class="venue-popup-artist" data-artist="${escapeHtml(show.artistId)}">${escapeHtml(show.artistName)}</span>${showVenue}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time></li>`;
+    })
+    .join('');
+  return `<div class="venue-popup past-shows-popup"><strong>${escapeHtml(venueLabel)}</strong>${location ? `<span class="venue-popup-location">${escapeHtml(location)}</span>` : ''}<ul>${rows}</ul></div>`;
+};
+const addPastShowLayers = () => {
+  liveMap.addSource(PAST_SHOW_SOURCE, {
+    type: 'geojson',
+    data: EMPTY_FEATURE_COLLECTION,
+    cluster: true,
+    clusterMaxZoom: 11,
+    clusterRadius: 44,
+  });
+  liveMap.addLayer({
+    id: PAST_CLUSTER_LAYER,
+    type: 'circle',
+    source: PAST_SHOW_SOURCE,
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': '#9386a3',
+      'circle-radius': ['step', ['get', 'point_count'], 13, 20, 17, 75, 21],
+      'circle-opacity': 0,
+      'circle-opacity-transition': { duration: 260 },
+      'circle-stroke-width': 1.5,
+      'circle-stroke-color': '#18131d',
+      'circle-stroke-opacity': 0.82,
+    },
+  });
+  liveMap.addLayer({
+    id: PAST_CLUSTER_COUNT_LAYER,
+    type: 'symbol',
+    source: PAST_SHOW_SOURCE,
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': ['get', 'point_count_abbreviated'],
+      'text-size': 11,
+    },
+    paint: {
+      'text-color': '#f4f0f6',
+      'text-opacity': 0,
+      'text-opacity-transition': { duration: 260 },
+    },
+  });
+  liveMap.addLayer({
+    id: PAST_POINT_LAYER,
+    type: 'circle',
+    source: PAST_SHOW_SOURCE,
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-color': markerColorExpression,
+      'circle-radius': ['step', ['get', 'eventCount'], 5, 2, 6, 5, 7],
+      'circle-opacity': 0,
+      'circle-opacity-transition': { duration: 260 },
+      'circle-stroke-width': 1.5,
+      'circle-stroke-color': '#080a0b',
+      'circle-stroke-opacity': 0.9,
+    },
+  });
+  liveMap.on('click', PAST_CLUSTER_LAYER, (event) => {
+    const feature = liveMap.queryRenderedFeatures(event.point, {
+      layers: [PAST_CLUSTER_LAYER],
+    })[0];
+    if (!feature) return;
+    const source = liveMap.getSource(PAST_SHOW_SOURCE);
+    Promise.resolve(source.getClusterExpansionZoom(feature.properties.cluster_id)).then(
+      (zoom) => liveMap.easeTo({ center: feature.geometry.coordinates, zoom }),
+    );
+  });
+  liveMap.on('click', PAST_POINT_LAYER, (event) => {
+    const feature = event.features?.[0];
+    const group = pastFeatureGroups.get(feature?.properties?.historyId);
+    if (!feature || !group) return;
+    pastHoverPopup?.remove();
+    activePastPopup?.remove();
+    activePastPopup = new maplibregl.Popup({ offset: 13, maxWidth: '330px' })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(pastPopupHtml(group))
+      .addTo(liveMap);
+  });
+  liveMap.on('mouseenter', PAST_POINT_LAYER, (event) => {
+    liveMap.getCanvas().style.cursor = 'pointer';
+    if (window.matchMedia('(hover: none)').matches) return;
+    const feature = event.features?.[0];
+    const group = pastFeatureGroups.get(feature?.properties?.historyId);
+    if (!feature || !group) return;
+    pastHoverPopup?.remove();
+    pastHoverPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 10,
+      maxWidth: '250px',
+    })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(pastPopupHtml(group, true))
+      .addTo(liveMap);
+  });
+  liveMap.on('mouseleave', PAST_POINT_LAYER, () => {
+    liveMap.getCanvas().style.cursor = '';
+    pastHoverPopup?.remove();
+    pastHoverPopup = null;
+  });
+  liveMap.on('mouseenter', PAST_CLUSTER_LAYER, () => {
+    liveMap.getCanvas().style.cursor = 'pointer';
+  });
+  liveMap.on('mouseleave', PAST_CLUSTER_LAYER, () => {
+    liveMap.getCanvas().style.cursor = '';
+  });
+};
 const initMap = async () => {
   await loadMapLibrary();
   liveMap = new maplibregl.Map({
@@ -477,6 +640,8 @@ const initMap = async () => {
       window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0,
   });
   liveMap.addControl(new maplibregl.NavigationControl(), 'top-left');
+  await new Promise((resolve) => liveMap.once('load', resolve));
+  addPastShowLayers();
 };
 const safeTicketUrl = (value) => {
   try {
@@ -508,46 +673,160 @@ const validCoordinates = (show) => {
     ? { latitude, longitude }
     : null;
 };
-const groupShowsByVenue = (shows) => {
-  const groups = [];
-  shows.forEach((show) => {
-    const coordinates = validCoordinates(show);
-    const venueKey = [show.venue, show.city, show.state]
-      .map(normalizeVenuePart)
-      .join('|');
-    const coordinateKey = coordinates
+const venueIdentity = (show) => {
+  const coordinates = validCoordinates(show);
+  const venueParts = [show.venue, show.city, show.state].map(normalizeVenuePart);
+  return {
+    coordinates,
+    venueKey: venueParts.some(Boolean) ? venueParts.join('|') : '',
+    coordinateKey: coordinates
       ? `${coordinates.latitude.toFixed(5)}|${coordinates.longitude.toFixed(5)}`
-      : '';
-    let group = groups.find(
-      (candidate) =>
-        candidate.venueKey === venueKey ||
-        (coordinateKey && candidate.coordinateKey === coordinateKey),
-    );
-    if (!group) {
-      group = { venueKey, coordinateKey, coordinates, shows: [] };
-      groups.push(group);
+      : '',
+  };
+};
+const groupShowsByVenue = (shows) => {
+  const groups = new Set();
+  const groupByVenue = new Map();
+  const groupByCoordinates = new Map();
+  shows.forEach((show) => {
+    const { coordinates, venueKey, coordinateKey } = venueIdentity(show);
+    const venueGroup = venueKey ? groupByVenue.get(venueKey) : null;
+    const coordinateGroup = coordinateKey
+      ? groupByCoordinates.get(coordinateKey)
+      : null;
+    let group = venueGroup || coordinateGroup;
+    if (venueGroup && coordinateGroup && venueGroup !== coordinateGroup) {
+      coordinateGroup.shows.forEach((groupedShow) => venueGroup.shows.push(groupedShow));
+      coordinateGroup.venueKeys.forEach((key) => {
+        venueGroup.venueKeys.add(key);
+        groupByVenue.set(key, venueGroup);
+      });
+      coordinateGroup.coordinateKeys.forEach((key) => {
+        venueGroup.coordinateKeys.add(key);
+        groupByCoordinates.set(key, venueGroup);
+      });
+      if (!venueGroup.coordinates) venueGroup.coordinates = coordinateGroup.coordinates;
+      groups.delete(coordinateGroup);
+      group = venueGroup;
     }
+    if (!group) {
+      group = {
+        venueKey,
+        coordinateKey,
+        coordinates,
+        shows: [],
+        venueKeys: new Set(),
+        coordinateKeys: new Set(),
+      };
+      groups.add(group);
+    }
+    if (venueKey) {
+      group.venueKeys.add(venueKey);
+      groupByVenue.set(venueKey, group);
+      if (!group.venueKey) group.venueKey = venueKey;
+    }
+    if (coordinateKey) {
+      group.coordinateKeys.add(coordinateKey);
+      groupByCoordinates.set(coordinateKey, group);
+      if (!group.coordinateKey) group.coordinateKey = coordinateKey;
+    }
+    if (!group.coordinates && coordinates) group.coordinates = coordinates;
     group.shows.push(show);
   });
-  return groups;
+  return [...groups];
+};
+const updatePastShowLayer = (pastGroups) => {
+  const source = liveMap?.getSource(PAST_SHOW_SOURCE);
+  if (!source) return [];
+  clearTimeout(pastFadeTimer);
+  pastFeatureGroups.clear();
+  const features = pastGroups
+    .filter((group) => group.coordinates)
+    .map((group, index) => {
+      const artistIds = [...new Set(group.shows.map((show) => show.artistId))];
+      const historyId = `${group.coordinateKey || group.venueKey}|${index}`;
+      pastFeatureGroups.set(historyId, group);
+      return {
+        type: 'Feature',
+        id: historyId,
+        geometry: {
+          type: 'Point',
+          coordinates: [group.coordinates.longitude, group.coordinates.latitude],
+        },
+        properties: {
+          historyId,
+          artistId: artistIds.length === 1 ? artistIds[0] : 'multiple',
+          eventCount: group.shows.length,
+        },
+      };
+    });
+  pastLocationSelect.replaceChildren(
+    new Option('Choose a past location…', ''),
+  );
+  if (showPastShows) {
+    features.forEach((feature) => {
+      const group = pastFeatureGroups.get(feature.properties.historyId);
+      const firstShow = group.shows[0];
+      const artists = [...new Set(group.shows.map((show) => show.artistName))];
+      const location = [firstShow.venue, firstShow.city, firstShow.state]
+        .filter(Boolean)
+        .join(' — ');
+      pastLocationSelect.add(
+        new Option(
+          `${artists.join(', ')} — ${location || 'Past show location'} (${group.shows.length})`,
+          feature.properties.historyId,
+        ),
+      );
+    });
+  }
+  pastLocationSelect.hidden = !showPastShows || features.length === 0;
+  if (showPastShows) {
+    source.setData({ type: 'FeatureCollection', features });
+    requestAnimationFrame(() => setPastLayerVisibility(1));
+  } else {
+    setPastLayerVisibility(0);
+    pastFadeTimer = setTimeout(() => {
+      source.setData(EMPTY_FEATURE_COLLECTION);
+      pastFeatureGroups.clear();
+    }, 280);
+  }
+  return features;
 };
 const renderShows = () => {
   if (!liveMap) return;
+  pastHoverPopup?.remove();
+  pastHoverPopup = null;
+  activePastPopup?.remove();
+  activePastPopup = null;
   const enabled = enabledArtists();
-  const visible = approvedShows
-    .filter(
-      (show) =>
-        show.approved === true &&
-        enabled.has(artistSlugs[show.artist]) &&
-        isUpcoming(show),
-    )
+  const artistVisible = approvedShows
+    .map(normalizeShow)
+    .filter((show) => show.approved === true && enabled.has(show.artistId));
+  const visible = artistVisible
+    .filter((show) => show.status === 'upcoming')
     .sort((a, b) => showDateValue(a.date) - showDateValue(b.date));
+  const venueGroups = groupShowsByVenue(artistVisible);
+  const upcomingVenueGroups = venueGroups
+    .map((group) => ({
+      ...group,
+      allShows: group.shows,
+      shows: group.shows.filter((show) => show.status === 'upcoming'),
+    }))
+    .filter((group) => group.shows.length);
+  const pastOnlyVenueGroups = venueGroups
+    .filter((group) => !group.shows.some((show) => show.status === 'upcoming'))
+    .map((group) => ({
+      ...group,
+      shows: group.shows.filter((show) => show.status === 'past'),
+    }))
+    .filter((group) => group.shows.length);
+  const pastFeatures = updatePastShowLayer(pastOnlyVenueGroups);
   showMarkers.forEach((marker) => marker.remove());
   showMarkers = [];
   showMarkerById.clear();
   showDates.replaceChildren();
-  mapEmpty.hidden = visible.length > 0;
-  if (!visible.length) {
+  mapEmpty.hidden = visible.length > 0 || (showPastShows && pastFeatures.length > 0);
+  if (!visible.length && !(showPastShows && pastFeatures.length)) {
     const noneSelected = enabled.size === 0;
     mapEmpty.querySelector('strong').textContent = noneSelected
       ? 'No artists selected'
@@ -557,8 +836,12 @@ const renderShows = () => {
       : 'No approved upcoming shows match the selected artists.';
     showDates.innerHTML =
       '<div class="empty-dates">No upcoming shows to display.</div>';
-    liveMap.jumpTo({ center: [-98, 41.5], zoom: 4 });
+    if (!showPastShows) liveMap.jumpTo({ center: [-98, 41.5], zoom: 4 });
     return;
+  }
+  if (!visible.length) {
+    showDates.innerHTML =
+      '<div class="empty-dates">No upcoming shows to display.</div>';
   }
   const showCards = new Map();
   visible.forEach((show) => {
@@ -578,7 +861,7 @@ const renderShows = () => {
   });
 
   const bounds = [];
-  groupShowsByVenue(visible).forEach((group) => {
+  upcomingVenueGroups.forEach((group) => {
     if (!group.coordinates) return;
     const { latitude, longitude } = group.coordinates;
     const firstShow = group.shows[0];
@@ -603,6 +886,9 @@ const renderShows = () => {
       `${group.shows.length} upcoming ${group.shows.length === 1 ? 'show' : 'shows'} at ${venueLabel}, ${location}`,
     );
     markerElement.innerHTML = `<i class="marker-halo" aria-hidden="true"></i><svg aria-hidden="true" viewBox="0 0 28 36"><path d="M14 34S2 22 2 13a12 12 0 0 1 24 0c0 9-12 21-12 21Z"></path><circle cx="14" cy="13" r="4"></circle></svg>${group.shows.length > 1 ? `<b class="marker-count" aria-hidden="true">${group.shows.length}</b>` : ''}`;
+    const relatedPastShows = showPastShows
+      ? group.allShows.filter((show) => show.status === 'past')
+      : [];
     const popupRows = group.shows
       .map((show) => {
         const slug = artistSlugs[show.artist];
@@ -610,8 +896,13 @@ const renderShows = () => {
         const showVenue = venueNames.length > 1
           ? `<span class="venue-popup-venue">${escapeHtml(show.venue)}</span>`
           : '';
-        return `<li><span class="venue-popup-artist" data-artist="${escapeHtml(slug)}">${escapeHtml(show.artist)}</span>${showVenue}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time>${ticketUrl ? `<a href="${escapeHtml(ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets</a>` : ''}</li>`;
+        return `<li><span class="show-status upcoming-status">Upcoming show</span><span class="venue-popup-artist" data-artist="${escapeHtml(slug)}">${escapeHtml(show.artist)}</span>${showVenue}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time>${ticketUrl ? `<a href="${escapeHtml(ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets</a>` : ''}</li>`;
       })
+      .concat(
+        relatedPastShows.map(
+          (show) => `<li class="past-show-row"><span class="show-status">Past show</span><span class="venue-popup-artist" data-artist="${escapeHtml(show.artistId)}">${escapeHtml(show.artistName)}</span>${show.venue ? `<span class="venue-popup-venue">${escapeHtml(show.venue)}</span>` : ''}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time></li>`,
+        ),
+      )
       .join('');
     const popup = new maplibregl.Popup({ offset: 30, maxWidth: '330px' }).setHTML(
       `<div class="venue-popup"><strong>${escapeHtml(venueLabel)}</strong><span class="venue-popup-location">${escapeHtml(location)}</span><ul>${popupRows}</ul></div>`,
@@ -654,11 +945,17 @@ const renderShows = () => {
     });
     bounds.push([longitude, latitude]);
   });
-  if (bounds.length === 1) liveMap.jumpTo({ center: bounds[0], zoom: 9 });
-  else if (bounds.length > 1) {
-    const mapBounds = bounds.reduce(
+  const displayBounds = showPastShows
+    ? bounds.concat(
+        pastFeatures.map((feature) => feature.geometry.coordinates),
+      )
+    : bounds;
+  if (displayBounds.length === 1)
+    liveMap.jumpTo({ center: displayBounds[0], zoom: bounds.length ? 9 : 8 });
+  else if (displayBounds.length > 1) {
+    const mapBounds = displayBounds.reduce(
       (box, point) => box.extend(point),
-      new maplibregl.LngLatBounds(bounds[0], bounds[0]),
+      new maplibregl.LngLatBounds(displayBounds[0], displayBounds[0]),
     );
     liveMap.fitBounds(mapBounds, { padding: 40, maxZoom: 9 });
   }
@@ -666,6 +963,23 @@ const renderShows = () => {
 document
   .querySelectorAll('[data-artist-filter]')
   .forEach((box) => box.addEventListener('change', renderShows));
+pastShowsToggle.addEventListener('click', () => {
+  showPastShows = !showPastShows;
+  pastShowsToggle.setAttribute('aria-checked', String(showPastShows));
+  pastShowsToggle.querySelector('b').textContent = showPastShows ? 'On' : 'Off';
+  renderShows();
+});
+pastLocationSelect.addEventListener('change', () => {
+  const group = pastFeatureGroups.get(pastLocationSelect.value);
+  if (!group?.coordinates) return;
+  const center = [group.coordinates.longitude, group.coordinates.latitude];
+  activePastPopup?.remove();
+  activePastPopup = new maplibregl.Popup({ offset: 13, maxWidth: '330px' })
+    .setLngLat(center)
+    .setHTML(pastPopupHtml(group))
+    .addTo(liveMap);
+  liveMap.flyTo({ center, zoom: 11 });
+});
 const loadShows = async () => {
   try {
     if (!liveMap) await initMap();
@@ -684,7 +998,7 @@ const loadShows = async () => {
         (show) =>
           show.approved === true &&
           artistSlugs[show.artist] &&
-          isUpcoming(show),
+          showDateKey(show.date),
       )
       .sort((a, b) => showDateValue(a.date) - showDateValue(b.date));
     renderShows();
@@ -698,10 +1012,7 @@ const loadShows = async () => {
 };
 loadShows();
 setInterval(loadShows, 300000);
-setInterval(() => {
-  approvedShows = approvedShows.filter(isUpcoming);
-  renderShows();
-}, 60000);
+setInterval(renderShows, 60000);
 
 const easterEggs = {
   'Anthony Segovia': {
