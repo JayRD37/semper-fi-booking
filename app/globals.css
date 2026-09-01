@@ -264,6 +264,85 @@ h1 {
   height: 1px;
   background: var(--gold);
 }
+.next-show-ticker {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  width: 100%;
+  height: 50px;
+  min-height: 50px;
+  padding: 0;
+  align-items: center;
+  border: 0;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+  border-bottom: 1px solid var(--border);
+  background: #0c0f10;
+  color: #c4c8ca;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    background var(--fast),
+    color var(--fast),
+    border-color var(--fast);
+}
+.next-show-ticker[hidden] {
+  display: none;
+}
+.next-show-ticker:hover {
+  border-bottom-color: rgb(212 175 55 / 38%);
+  background: #0f1315;
+  color: #ece9e2;
+}
+.next-show-ticker:focus-visible {
+  z-index: 4;
+  outline-offset: -4px;
+}
+.next-show-track {
+  display: flex;
+  width: max-content;
+  flex: none;
+  will-change: transform;
+  animation: next-show-scroll var(--next-show-duration, 36s) linear infinite;
+}
+.next-show-loop {
+  display: flex;
+  flex: none;
+}
+.next-show-item {
+  display: block;
+  flex: none;
+  padding: 0 clamp(24px, 3vw, 48px);
+  white-space: nowrap;
+  font:
+    600 12px/1 'Barlow Condensed',
+    sans-serif;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.next-show-item strong {
+  color: var(--gold);
+  font-weight: 700;
+}
+.next-show-countdown {
+  color: #f2efe8;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes next-show-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (max-width: 600px) {
+  .next-show-ticker {
+    height: 48px;
+    min-height: 48px;
+  }
+  .next-show-item {
+    padding-inline: 24px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+}
 .section {
   padding: clamp(76px, 9vw, 130px) clamp(20px, 6.4vw, 108px);
 }
@@ -2052,6 +2131,9 @@ footer {
 .venue-popup li:has([data-artist='anthony-segovia']) {
   --artist-color: #4da3ff;
 }
+.venue-popup li.ticker-focused-show {
+  background: rgb(212 175 55 / 8%);
+}
 .venue-popup-artist {
   color: var(--artist-color, #fff);
   font: 700 15px/1.2 'Barlow Condensed', sans-serif;
@@ -2277,5 +2359,25 @@ body.egg-open {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  .next-show-track {
+    width: 100%;
+    justify-content: center;
+    animation: none !important;
+    transform: none !important;
+    will-change: auto;
+  }
+  .next-show-loop {
+    width: 100%;
+    justify-content: center;
+  }
+  .next-show-loop:nth-child(2),
+  .next-show-item:not(:first-child) {
+    display: none;
+  }
+  .next-show-item:first-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

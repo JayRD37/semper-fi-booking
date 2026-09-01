@@ -437,8 +437,35 @@ const showDateValue = (value) => {
   const [year, month, day] = key.split('-').map(Number);
   return new Date(year, month - 1, day, 12);
 };
+const showTimeParts = (value) => {
+  const match = String(value || '')
+    .trim()
+    .toLowerCase()
+    .match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  const period = match[3] || '';
+  if (minute > 59 || hour > (period ? 12 : 23)) return null;
+  if (period === 'am' && hour === 12) hour = 0;
+  if (period === 'pm' && hour < 12) hour += 12;
+  return { hour, minute };
+};
+const showStartValue = (show) => {
+  const key = showDateKey(show.date);
+  if (!key) return new Date(NaN);
+  const [year, month, day] = key.split('-').map(Number);
+  const time = showTimeParts(show.time);
+  return new Date(
+    year,
+    month - 1,
+    day,
+    time?.hour ?? 23,
+    time?.minute ?? 59,
+  );
+};
 const showStatus = (show) =>
-  showDateKey(show.date) < localDateKey() ? 'past' : 'upcoming';
+  showStartValue(show).valueOf() < Date.now() ? 'past' : 'upcoming';
 const normalizeShow = (show) => ({
   ...show,
   artistId: artistSlugs[show.artist] || '',
@@ -446,6 +473,109 @@ const normalizeShow = (show) => ({
   date: showDateKey(show.date),
   status: showStatus(show),
 });
+const nextShowTicker = document.querySelector('#next-show');
+const nextShowLoops = [...nextShowTicker.querySelectorAll('.next-show-loop')];
+let currentNextShowId = '';
+let nextShowCountdownNodes = [];
+const showLocation = (show) =>
+  [show.city, show.state].filter((value) => String(value || '').trim()).join(', ');
+const accessibleShowSchedule = (show) => {
+  const date = showDateValue(show.date);
+  const formattedDate = Number.isNaN(date.valueOf())
+    ? ''
+    : date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+  return [formattedDate, String(show.time || '').trim()]
+    .filter(Boolean)
+    .join(' at ');
+};
+const countdownText = (show) => {
+  const remainingMinutes = Math.max(
+    0,
+    Math.ceil((showStartValue(show).valueOf() - Date.now()) / 60000),
+  );
+  const days = Math.floor(remainingMinutes / 1440);
+  const hours = Math.floor((remainingMinutes % 1440) / 60);
+  const minutes = remainingMinutes % 60;
+  return `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;
+};
+const nextUpcomingShow = () =>
+  approvedShows
+    .map(normalizeShow)
+    .filter((show) => show.approved === true && show.status === 'upcoming')
+    .sort(
+      (a, b) =>
+        showStartValue(a) - showStartValue(b) || String(a.id).localeCompare(String(b.id)),
+    )[0] || null;
+const buildTickerItem = (show, countdown) => {
+  const item = document.createElement('span');
+  item.className = 'next-show-item';
+  const label = document.createElement('strong');
+  label.textContent = 'Next Show';
+  item.append(label);
+  [show.artistName, show.venue, showLocation(show)]
+    .filter((value) => String(value || '').trim())
+    .forEach((value) => item.append(` • ${value}`));
+  const countdownNode = document.createElement('span');
+  countdownNode.className = 'next-show-countdown';
+  countdownNode.textContent = ` • ${countdown}`;
+  item.append(countdownNode, ' •');
+  nextShowCountdownNodes.push(countdownNode);
+  return item;
+};
+const updateNextShowTicker = (forceLayout = false) => {
+  const show = nextUpcomingShow();
+  if (!show) {
+    currentNextShowId = '';
+    nextShowCountdownNodes = [];
+    nextShowTicker.hidden = true;
+    return;
+  }
+  const countdown = countdownText(show);
+  if (forceLayout || currentNextShowId !== show.id || nextShowTicker.hidden) {
+    currentNextShowId = show.id;
+    nextShowCountdownNodes = [];
+    nextShowTicker.hidden = false;
+    nextShowLoops[0].replaceChildren(buildTickerItem(show, countdown));
+    const itemWidth =
+      nextShowLoops[0].firstElementChild?.getBoundingClientRect().width || 600;
+    const repeatCount = Math.max(
+      2,
+      Math.ceil(nextShowTicker.clientWidth / itemWidth) + 1,
+    );
+    nextShowCountdownNodes = [];
+    nextShowLoops.forEach((loop) => {
+      loop.replaceChildren(
+        ...Array.from({ length: repeatCount }, () =>
+          buildTickerItem(show, countdown),
+        ),
+      );
+    });
+    const loopWidth = nextShowLoops[0].scrollWidth;
+    const duration = Math.min(40, Math.max(25, loopWidth / 90));
+    nextShowTicker.style.setProperty('--next-show-duration', `${duration}s`);
+    const venue = String(show.venue || '').trim();
+    const location = showLocation(show);
+    const schedule = accessibleShowSchedule(show);
+    nextShowTicker.setAttribute(
+      'aria-label',
+      `View next show: ${show.artistName}${venue ? ` at ${venue}` : ''}${location ? ` in ${location}` : ''}${schedule ? ` on ${schedule}` : ''} on the map`,
+    );
+  } else {
+    nextShowCountdownNodes.forEach((node) => {
+      node.textContent = ` • ${countdown}`;
+    });
+  }
+};
+let tickerResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(tickerResizeTimer);
+  tickerResizeTimer = setTimeout(() => updateNextShowTicker(true), 160);
+});
+document.fonts?.ready.then(() => updateNextShowTicker(true));
 const formatShowDate = (value) =>
   showDateValue(value).toLocaleDateString('en-US', {
     month: 'short',
@@ -896,7 +1026,7 @@ const renderShows = () => {
         const showVenue = venueNames.length > 1
           ? `<span class="venue-popup-venue">${escapeHtml(show.venue)}</span>`
           : '';
-        return `<li><span class="show-status upcoming-status">Upcoming show</span><span class="venue-popup-artist" data-artist="${escapeHtml(slug)}">${escapeHtml(show.artist)}</span>${showVenue}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time>${ticketUrl ? `<a href="${escapeHtml(ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets</a>` : ''}</li>`;
+        return `<li data-show-id="${escapeHtml(show.id)}"><span class="show-status upcoming-status">Upcoming show</span><span class="venue-popup-artist" data-artist="${escapeHtml(slug)}">${escapeHtml(show.artist)}</span>${showVenue}<time datetime="${escapeHtml(show.date)}">${escapeHtml(formatShowSchedule(show))}</time>${ticketUrl ? `<a href="${escapeHtml(ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets</a>` : ''}</li>`;
       })
       .concat(
         relatedPastShows.map(
@@ -960,6 +1090,48 @@ const renderShows = () => {
     liveMap.fitBounds(mapBounds, { padding: 40, maxZoom: 9 });
   }
 };
+const focusTickerShowOnMap = () => {
+  const show = approvedShows
+    .map(normalizeShow)
+    .find((candidate) => candidate.id === currentNextShowId);
+  if (!show || show.status !== 'upcoming') {
+    updateNextShowTicker();
+    return;
+  }
+  const artistFilter = document.querySelector(
+    `[data-artist-filter="${show.artistId}"]`,
+  );
+  if (artistFilter && !artistFilter.checked) {
+    artistFilter.checked = true;
+    renderShows();
+  }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelector('#shows').scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start',
+  });
+  setTimeout(
+    () => {
+      const marker = showMarkerById.get(show.id);
+      const coordinates = validCoordinates(show);
+      if (!marker && !coordinates) return;
+      const center = marker
+        ? marker.getLngLat()
+        : [coordinates.longitude, coordinates.latitude];
+      liveMap.resize();
+      liveMap.flyTo({ center, zoom: 12 });
+      if (marker && !marker.getPopup().isOpen()) marker.togglePopup();
+      requestAnimationFrame(() => {
+        const popupRow = [...document.querySelectorAll('[data-show-id]')].find(
+          (row) => row.dataset.showId === show.id,
+        );
+        popupRow?.classList.add('ticker-focused-show');
+      });
+    },
+    reduceMotion ? 0 : 450,
+  );
+};
+nextShowTicker.addEventListener('click', focusTickerShowOnMap);
 document
   .querySelectorAll('[data-artist-filter]')
   .forEach((box) => box.addEventListener('change', renderShows));
@@ -1002,6 +1174,7 @@ const loadShows = async () => {
       )
       .sort((a, b) => showDateValue(a.date) - showDateValue(b.date));
     renderShows();
+    updateNextShowTicker();
   } catch {
     mapEmpty.hidden = false;
     mapEmpty.querySelector('strong').textContent = 'Dates unavailable';
@@ -1013,6 +1186,7 @@ const loadShows = async () => {
 loadShows();
 setInterval(loadShows, 300000);
 setInterval(renderShows, 60000);
+setInterval(updateNextShowTicker, 30000);
 
 const easterEggs = {
   'Anthony Segovia': {
