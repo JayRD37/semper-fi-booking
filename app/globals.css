@@ -1764,7 +1764,7 @@ footer {
   --filter-color: var(--gold);
 }
 .artist-filters input[data-artist-filter='anthony-segovia']:checked + span {
-  --filter-color: #fff;
+  --filter-color: #4da3ff;
 }
 .artist-filters label:has(input:focus-visible) {
   outline: 3px solid var(--gold);
@@ -1826,7 +1826,7 @@ footer {
   --marker-color: var(--gold);
 }
 .semper-map-marker[data-artist='anthony-segovia'] {
-  --marker-color: #fff;
+  --marker-color: #4da3ff;
 }
 .semper-map-marker[data-artist='multiple'] {
   --marker-color: #d8dde0;
@@ -1913,7 +1913,7 @@ footer {
   --artist-color: var(--gold);
 }
 .venue-popup li:has([data-artist='anthony-segovia']) {
-  --artist-color: #fff;
+  --artist-color: #4da3ff;
 }
 .venue-popup-artist {
   color: var(--artist-color, #fff);
