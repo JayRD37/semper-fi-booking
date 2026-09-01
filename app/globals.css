@@ -1817,12 +1817,19 @@ footer {
   }
   .show-list {
     height: clamp(320px, 52vh, 420px);
+    display: flex;
+    flex-direction: column;
     border-left: 0;
     border-top: 1px solid var(--border);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    touch-action: none;
+    overflow: hidden;
+    overscroll-behavior: auto;
+    scrollbar-gutter: auto;
+    touch-action: pan-y;
+  }
+  .show-list .show-dates {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
   .show-scroll-hint {
     display: flex;
