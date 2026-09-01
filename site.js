@@ -342,7 +342,7 @@ document.querySelectorAll('a[href="#about"]').forEach((link) => {
 });
 const process = document.querySelector('.process');
 process.outerHTML =
-  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="map-filter-groups"><fieldset class="map-filter-group"><legend>Artists</legend><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label></div></fieldset><fieldset class="map-filter-group history-filter"><legend>History</legend><button type="button" class="past-shows-toggle" data-past-shows-toggle role="switch" aria-checked="false" aria-label="Show past shows"><span class="past-shows-track" aria-hidden="true"><i></i></span><span>Past Shows</span><b>Off</b></button><select class="past-location-select" data-past-location-select aria-label="Choose a past show location" hidden><option value="">Choose a past location…</option></select></fieldset></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming and past shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list"><p class="eyebrow gold">Upcoming Dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
+  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="map-filter-groups"><fieldset class="map-filter-group"><legend>Artists</legend><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label></div></fieldset><fieldset class="map-filter-group history-filter"><legend>History</legend><button type="button" class="past-shows-toggle" data-past-shows-toggle role="switch" aria-checked="false" aria-label="Show past shows"><span class="past-shows-track" aria-hidden="true"><i></i></span><span>Past Shows</span><b>Off</b></button><select class="past-location-select" data-past-location-select aria-label="Choose a past show location" hidden><option value="">Choose a past location…</option></select></fieldset></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming and past shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list" tabindex="0" role="region" aria-label="Upcoming show dates. On touch screens, use two fingers to scroll this list."><p class="eyebrow gold">Upcoming Dates</p><p class="show-scroll-hint"><span aria-hidden="true">↕</span> Use two fingers to scroll show dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
 const SHOWS_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbzm7n06SI-AROY0SVsnnyTH-CJuevgodlFKZj2A1aPZCZ-5k6Fff1TEYCyvrjSq0ZY6/exec';
 const venueGroupTestEnabled =
@@ -393,6 +393,61 @@ const artistSlugs = {
 };
 const mapEmpty = document.querySelector('.map-empty');
 const showDates = document.querySelector('.show-dates');
+const showList = document.querySelector('.show-list');
+const mobileShowList = window.matchMedia('(max-width: 800px)');
+let showListTouchCount = 0;
+let showListTouchY = 0;
+const averageTouchY = (touches) =>
+  Array.from(touches).reduce((total, touch) => total + touch.clientY, 0) /
+  touches.length;
+showList.addEventListener(
+  'touchstart',
+  (event) => {
+    if (!mobileShowList.matches) return;
+    showListTouchCount = event.touches.length;
+    showListTouchY = averageTouchY(event.touches);
+  },
+  { passive: true },
+);
+showList.addEventListener(
+  'touchmove',
+  (event) => {
+    if (
+      !mobileShowList.matches ||
+      !event.touches.length
+    )
+      return;
+    const touchCount = event.touches.length;
+    const nextY = averageTouchY(event.touches);
+    if (touchCount !== showListTouchCount) {
+      showListTouchCount = touchCount;
+      showListTouchY = nextY;
+      return;
+    }
+    const delta = showListTouchY - nextY;
+    showListTouchY = nextY;
+    if (event.cancelable) event.preventDefault();
+    if (touchCount >= 2) showList.scrollTop += delta;
+    else window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+  },
+  { passive: false },
+);
+showList.addEventListener(
+  'touchend',
+  (event) => {
+    showListTouchCount = event.touches.length;
+    showListTouchY = event.touches.length ? averageTouchY(event.touches) : 0;
+  },
+  { passive: true },
+);
+showList.addEventListener(
+  'touchcancel',
+  () => {
+    showListTouchCount = 0;
+    showListTouchY = 0;
+  },
+  { passive: true },
+);
 if (venueGroupTestEnabled) {
   document
     .querySelector('.show-map-heading')

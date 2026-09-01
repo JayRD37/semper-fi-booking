@@ -1799,6 +1799,9 @@ footer {
   border-radius: 10px;
   background: var(--gold);
 }
+.show-scroll-hint {
+  display: none;
+}
 .empty-dates {
   padding-top: 22px;
   border-top: 1px solid var(--border);
@@ -1813,12 +1816,27 @@ footer {
     min-height: 400px;
   }
   .show-list {
-    height: auto;
+    height: clamp(320px, 52vh, 420px);
     border-left: 0;
     border-top: 1px solid var(--border);
-    overflow: visible;
-    overscroll-behavior: auto;
-    scrollbar-gutter: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    touch-action: none;
+  }
+  .show-scroll-hint {
+    display: flex;
+    margin: 10px 0 0;
+    align-items: center;
+    gap: 7px;
+    color: #aab0b3;
+    font: 600 12px/1.3 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .show-scroll-hint span {
+    color: var(--gold);
+    font-size: 16px;
   }
 }
 .map-filter-groups {
