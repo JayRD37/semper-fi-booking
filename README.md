@@ -15,9 +15,9 @@ Serve the repository root with any static web server, then open `index.html` thr
 
 The approved public phone number is `(402) 304-7059` / `+14023047059`.
 
-## Booking inquiry integration point
+## Booking inquiries
 
-The current booking form stores a draft only in the visitor's browser and prepares a copyable inquiry summary. It does not transmit personal information. When a business email or external form provider is approved, connect the submission in `site.js`; never commit private keys or secrets.
+The booking form keeps an in-progress draft in the visitor's browser and sends completed inquiries to `semperfibooking@outlook.com` through FormSubmit. The form includes spam protection and requires a one-time FormSubmit activation from that mailbox before delivery begins.
 
 ## Publishing
 

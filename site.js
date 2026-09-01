@@ -46,11 +46,8 @@ window.addEventListener(
   { passive: true },
 );
 const form = document.querySelector('#booking-form');
-const result = document.querySelector('#inquiry-result');
-const summary = document.querySelector('#inquiry-summary');
-const copyButton = document.querySelector('#copy-inquiry');
-const copyStatus = document.querySelector('#copy-status');
 const clearButton = document.querySelector('.clear-draft');
+const formNote = document.querySelector('.form-note');
 const draftKey = 'semperFiBookingDraft';
 const artistField = document.createElement('div');
 artistField.className = 'field';
@@ -58,20 +55,24 @@ artistField.innerHTML =
   '<label for="inquiry-artist">Artist</label><select id="inquiry-artist" name="artist"><option value="">Choose an artist</option><option>Anthony Segovia</option><option>The Traynr Band</option><option>Briella Steiner</option><option>The Wicked</option><option>Not sure yet</option></select>';
 form.querySelector('#inquiry-type').closest('.field').before(artistField);
 const artistSelect = artistField.querySelector('select');
-const labels = {
-  name: 'Name',
-  organization: 'Organization / Venue',
-  artist: 'Artist',
-  eventType: 'Event Type',
-  eventDate: 'Event Date',
-  city: 'City',
-  state: 'State',
-  capacity: 'Estimated Capacity',
-  budget: 'Budget / Offer',
-  details: 'Additional Details',
-};
+const draftFields = [
+  'name',
+  'email',
+  'phone',
+  'organization',
+  'artist',
+  'eventType',
+  'eventDate',
+  'city',
+  'state',
+  'capacity',
+  'budget',
+  'details',
+];
 const saveDraft = () => {
-  const data = Object.fromEntries(new FormData(form));
+  const data = Object.fromEntries(
+    draftFields.map((field) => [field, form.elements[field]?.value || '']),
+  );
   localStorage.setItem(draftKey, JSON.stringify(data));
 };
 const loadDraft = () => {
@@ -85,48 +86,32 @@ const loadDraft = () => {
   }
 };
 form.addEventListener('input', saveDraft);
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
+form.addEventListener('submit', () => {
   if (!form.reportValidity()) return;
-  const data = Object.fromEntries(new FormData(form));
-  summary.textContent = [
-    'SEMPER FI BOOKING INQUIRY',
-    '',
-    ...Object.entries(data)
-      .filter(([, value]) => String(value).trim())
-      .map(([key, value]) => `${labels[key]}: ${value}`),
-    '',
-    'Call: (402) 304-7059',
-  ].join('\n');
-  result.hidden = false;
-  result.focus();
-  result.scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
-copyButton.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(summary.textContent);
-    copyStatus.textContent = 'Inquiry summary copied.';
-  } catch {
-    copyStatus.textContent = 'Select the summary above and copy it manually.';
-  }
+  const submitButton = form.querySelector('[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Sending…';
 });
 clearButton.addEventListener('click', () => {
   if (!confirm('Clear the saved booking draft from this device?')) return;
   form.reset();
   localStorage.removeItem(draftKey);
-  result.hidden = true;
-  copyStatus.textContent = 'Saved draft cleared.';
+  formNote.textContent = 'Saved draft cleared.';
 });
 document.querySelector('.hero-copy').textContent =
   'Booking artists for venues, festivals, and events. Call us when you need help finding the right fit.';
 document.querySelector('.booking-intro .eyebrow').textContent =
   'Booking Details';
 document.querySelector('.booking-intro>p:not(.eyebrow)').textContent =
-  'Use this to organize the event details before you call. Nothing is sent to us. The draft stays in this browser until you clear it.';
+  'Send the event details and we will follow up about availability and fit.';
 clearButton.textContent = 'Clear Saved Draft';
-document.querySelector('.form-note').textContent =
-  'This only creates a summary on your device. Copy it for your notes, then call us.';
 loadDraft();
+if (new URLSearchParams(window.location.search).get('inquiry') === 'sent') {
+  form.reset();
+  localStorage.removeItem(draftKey);
+  formNote.textContent = 'Inquiry sent. Semper Fi will follow up using the contact information you provided.';
+  formNote.classList.add('form-note-success');
+}
 const roster = document.querySelector('.roster');
 const artistTrack = roster.querySelector('.artist-track');
 const artistSlides = [...roster.querySelectorAll('.artist-slide')];

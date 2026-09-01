@@ -25,8 +25,8 @@
       content="Artist booking for venues, festivals, and events."
     />
     <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="app/globals.css?v=shows13" />
-    <script src="site.js?v=shows13" defer></script>
+    <link rel="stylesheet" href="app/globals.css?v=shows14" />
+    <script src="site.js?v=shows14" defer></script>
   </head>
   <body>
     <main>
@@ -481,8 +481,8 @@
           <p class="eyebrow gold">Book Talent</p>
           <h2>Find the right artist for your event.</h2>
           <p>
-            Build a quick inquiry brief, copy it, then call Semper Fi to discuss
-            availability and fit. Your draft stays on this device.
+            Send the event details and Semper Fi will follow up about
+            availability and fit.
           </p>
           <div class="opportunity-list" aria-label="Opportunity types">
             <span>Venues</span><span>Festivals</span><span>Fairs</span
@@ -490,7 +490,27 @@
             ><span>Private Events</span><span>Colleges</span>
           </div>
         </div>
-        <form id="booking-form" class="booking-form">
+        <form
+          id="booking-form"
+          class="booking-form"
+          action="https://formsubmit.co/semperfibooking@outlook.com"
+          method="POST"
+        >
+          <input type="hidden" name="_subject" value="New Semper Fi booking inquiry" />
+          <input type="hidden" name="_template" value="table" />
+          <input
+            type="hidden"
+            name="_next"
+            value="https://www.semperfibooking.com/?inquiry=sent#book-talent"
+          />
+          <input
+            class="form-honeypot"
+            type="text"
+            name="_honey"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          />
           <div class="field">
             <label for="inquiry-name">Your name <em>Required</em></label
             ><input
@@ -501,11 +521,30 @@
             />
           </div>
           <div class="field">
+            <label for="inquiry-email">Email <em>Required</em></label
+            ><input
+              id="inquiry-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <div class="field">
             <label for="inquiry-org">Organization or venue</label
             ><input
               id="inquiry-org"
               name="organization"
               autocomplete="organization"
+            />
+          </div>
+          <div class="field">
+            <label for="inquiry-phone">Phone</label
+            ><input
+              id="inquiry-phone"
+              name="phone"
+              type="tel"
+              autocomplete="tel"
             />
           </div>
           <div class="field">
@@ -573,32 +612,9 @@
             </button>
           </div>
           <p class="form-note field-wide">
-            This first release does not transmit your information online. It
-            prepares a summary you can copy before calling.
+            Your inquiry will be sent directly to Semper Fi Booking.
           </p>
         </form>
-        <div id="inquiry-result" class="inquiry-result" hidden tabindex="-1">
-          <p class="eyebrow gold">Inquiry Ready</p>
-          <h3>Copy your brief, then call.</h3>
-          <pre id="inquiry-summary"></pre>
-          <div class="result-actions">
-            <button
-              id="copy-inquiry"
-              class="button button-primary"
-              type="button"
-            >
-              Copy Details</button
-            ><a class="button button-outline" href="tel:+14023047059"
-              >Call (402) 304-7059</a
-            >
-          </div>
-          <p
-            id="copy-status"
-            class="copy-status"
-            role="status"
-            aria-live="polite"
-          ></p>
-        </div>
       </section>
       <section id="venues-promoters" class="section partners">
         <div class="section-heading align-left">
