@@ -585,12 +585,6 @@ h1 {
   color: #d3d0ca;
   line-height: 1.7;
 }
-.contact-note {
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 13px;
-}
 .back-to-top {
   color: var(--gold);
   text-transform: uppercase;
@@ -860,9 +854,25 @@ footer {
 .phone-link:hover strong {
   color: var(--gold);
 }
-.contact-note {
-  padding-top: 0;
-  border-top: 0;
+.email-link {
+  display: grid;
+  gap: 5px;
+  width: max-content;
+  max-width: 100%;
+}
+.email-link span {
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+}
+.email-link strong {
+  font: 600 clamp(22px, 2.5vw, 32px)/1.15 'Barlow Condensed';
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.email-link:hover strong {
+  color: var(--gold);
 }
 .footer-links {
   display: grid;
