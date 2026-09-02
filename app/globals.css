@@ -191,13 +191,6 @@ button:focus-visible {
   max-width: 840px;
   padding: 130px clamp(20px, 6.4vw, 108px) 90px;
 }
-.hero-emblem {
-  display: block;
-  width: clamp(112px, 10vw, 150px);
-  height: auto;
-  margin: 0 0 18px;
-  filter: drop-shadow(0 8px 18px rgb(0 0 0/48%));
-}
 .eyebrow {
   margin: 0 0 18px;
   color: #d6d3cc;
@@ -725,10 +718,6 @@ footer {
   }
   .hero-content {
     padding: 120px 20px 78px;
-  }
-  .hero-emblem {
-    width: 92px;
-    margin-bottom: 14px;
   }
   .eyebrow {
     font-size: 10px;
