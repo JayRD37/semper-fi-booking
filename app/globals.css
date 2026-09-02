@@ -958,6 +958,61 @@ footer {
 .field-wide {
   grid-column: 1/-1;
 }
+.production-provided {
+  min-width: 0;
+  margin: 0;
+  padding: 18px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.production-provided legend {
+  padding: 0;
+  color: #dedbd3;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.production-provided > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.production-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.production-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: rgb(255 255 255/2%);
+  cursor: pointer;
+}
+.production-option:has(input:checked) {
+  border-color: var(--gold);
+  background: rgb(210 173 92/8%);
+}
+.field .production-option input[type='checkbox'] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--gold);
+}
+.production-option span {
+  color: #dedbd3;
+  font-size: 14px;
+  font-weight: 600;
+}
 .field label {
   color: #dedbd3;
   font-size: 12px;
@@ -1062,6 +1117,9 @@ footer {
   }
   .field-wide {
     grid-column: 1;
+  }
+  .production-options {
+    grid-template-columns: 1fr;
   }
   .form-actions,
   .result-actions {

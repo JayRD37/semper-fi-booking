@@ -67,11 +67,22 @@ const draftFields = [
   'state',
   'capacity',
   'budget',
+  'lightsProvided',
+  'soundProvided',
+  'stageProvided',
   'details',
 ];
 const saveDraft = () => {
   const data = Object.fromEntries(
-    draftFields.map((field) => [field, form.elements[field]?.value || '']),
+    draftFields.map((field) => {
+      const element = form.elements[field];
+      return [
+        field,
+        element?.type === 'checkbox'
+          ? element.checked
+          : element?.value || '',
+      ];
+    }),
   );
   localStorage.setItem(draftKey, JSON.stringify(data));
 };
@@ -79,13 +90,21 @@ const loadDraft = () => {
   try {
     const data = JSON.parse(localStorage.getItem(draftKey) || '{}');
     Object.entries(data).forEach(([key, value]) => {
-      if (form.elements[key]) form.elements[key].value = value;
+      const element = form.elements[key];
+      if (!element) return;
+      if (element.type === 'checkbox') element.checked = Boolean(value);
+      else element.value = value;
     });
   } catch {
     localStorage.removeItem(draftKey);
   }
 };
 form.addEventListener('input', saveDraft);
+form.addEventListener('formdata', (event) => {
+  ['lightsProvided', 'soundProvided', 'stageProvided'].forEach((field) => {
+    if (!form.elements[field].checked) event.formData.set(field, 'No');
+  });
+});
 form.addEventListener('submit', () => {
   if (!form.reportValidity()) return;
   const submitButton = form.querySelector('[type="submit"]');
