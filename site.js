@@ -151,7 +151,10 @@ let isSliding = false;
 let swipeStart = 0;
 let swipePointer = null;
 const sizeRoster = () => {
-  rosterViewport.style.height = `${artistSlides[artistIndex].offsetHeight}px`;
+  rosterViewport.style.setProperty(
+    '--active-artist-height',
+    `${artistSlides[artistIndex].offsetHeight}px`,
+  );
 };
 const snapToPhysical = (index) => {
   artistTrack.style.transition = 'none';
@@ -172,6 +175,7 @@ const moveIndicatorBars = (direction) => {
   const shift = direction * 44;
   const animations = bars.map((bar, i) => {
     const destination = i + (direction < 0 ? -1 : 1);
+    bar.classList.toggle('indicator-incoming', destination === 1);
     const startOpacity = i === 1 ? 1 : 0.28;
     const endOpacity =
       destination === 1 ? 1 : destination < 0 || destination > 2 ? 0 : 0.28;
@@ -191,6 +195,7 @@ const moveIndicatorBars = (direction) => {
     if (direction < 0) dotRail.append(bars[0]);
     else dotRail.prepend(bars[2]);
     animations.forEach((animation) => animation.cancel());
+    bars.forEach((bar) => bar.classList.remove('indicator-incoming'));
     labelIndicatorBars();
   }, 550);
 };
