@@ -2231,6 +2231,9 @@ footer {
 .semper-map-marker[data-artist='the-traynr-band'] {
   --marker-color: var(--gold);
 }
+.semper-map-marker[data-artist='die-tired'] {
+  --marker-color: var(--gold);
+}
 .semper-map-marker[data-artist='anthony-segovia'] {
   --marker-color: #4da3ff;
 }
@@ -2316,6 +2319,9 @@ footer {
   --artist-color: #e3262e;
 }
 .venue-popup li:has([data-artist='the-traynr-band']) {
+  --artist-color: var(--gold);
+}
+.venue-popup li:has([data-artist='die-tired']) {
   --artist-color: var(--gold);
 }
 .venue-popup li:has([data-artist='anthony-segovia']) {
