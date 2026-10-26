@@ -1656,17 +1656,7 @@ footer {
     font-size: 46px;
   }
   .roster-viewport .roster-arrow {
-    position: relative !important;
-    align-self: start;
-    margin-top: 180px;
-    width: 40px;
-    height: 56px;
-  }
-  .roster-viewport .roster-prev {
-    margin-left: 6px;
-  }
-  .roster-viewport .roster-next {
-    margin-right: 6px;
+    display: none;
   }
   .artist-slide {
     grid-template-columns: minmax(0, 520px);
@@ -2003,6 +1993,12 @@ footer {
 .artist-filters input[data-artist-filter='the-traynr-band']:checked + span {
   --filter-color: var(--gold);
 }
+.artist-filters input[data-artist-filter='anyone-else']:checked + span {
+  --filter-color: #9b5de5;
+}
+.artist-filters input[data-artist-filter='die-tired']:checked + span {
+  --filter-color: #43a66b;
+}
 .artist-filters input[data-artist-filter='anthony-segovia']:checked + span {
   --filter-color: #4da3ff;
 }
@@ -2231,8 +2227,11 @@ footer {
 .semper-map-marker[data-artist='the-traynr-band'] {
   --marker-color: var(--gold);
 }
+.semper-map-marker[data-artist='anyone-else'] {
+  --marker-color: #9b5de5;
+}
 .semper-map-marker[data-artist='die-tired'] {
-  --marker-color: var(--gold);
+  --marker-color: #43a66b;
 }
 .semper-map-marker[data-artist='anthony-segovia'] {
   --marker-color: #4da3ff;
@@ -2321,8 +2320,11 @@ footer {
 .venue-popup li:has([data-artist='the-traynr-band']) {
   --artist-color: var(--gold);
 }
+.venue-popup li:has([data-artist='anyone-else']) {
+  --artist-color: #9b5de5;
+}
 .venue-popup li:has([data-artist='die-tired']) {
-  --artist-color: var(--gold);
+  --artist-color: #43a66b;
 }
 .venue-popup li:has([data-artist='anthony-segovia']) {
   --artist-color: #4da3ff;
