@@ -52,7 +52,7 @@ const draftKey = 'semperFiBookingDraft';
 const artistField = document.createElement('div');
 artistField.className = 'field';
 artistField.innerHTML =
-  '<label for="inquiry-artist">Artist</label><select id="inquiry-artist" name="artist"><option value="">Choose an artist</option><option>Anthony Segovia</option><option>The Traynr Band</option><option>Briella Steiner</option><option>The Wicked</option><option>Anyone Else</option><option>Die Tired</option><option>Not sure yet</option></select>';
+  '<label for="inquiry-artist">Artist</label><select id="inquiry-artist" name="artist"><option value="">Choose an artist</option><option>Anthony Segovia</option><option>The Traynr Band</option><option>Briella Steiner</option><option>The Wicked</option><option>Anyone Else</option><option>Die Tired</option><option>Jackson Wayne</option><option>Not sure yet</option></select>';
 form.querySelector('#inquiry-type').closest('.field').before(artistField);
 const artistSelect = artistField.querySelector('select');
 const draftFields = [
@@ -366,7 +366,7 @@ document.querySelectorAll('a[href="#about"]').forEach((link) => {
 });
 const process = document.querySelector('.process');
 process.outerHTML =
-  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="map-filter-groups"><fieldset class="map-filter-group"><legend>Artists</legend><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label><label><input type="checkbox" data-artist-filter="anyone-else" checked><span></span>Anyone Else</label><label><input type="checkbox" data-artist-filter="die-tired" checked><span></span>Die Tired</label></div></fieldset><fieldset class="map-filter-group history-filter"><legend>History</legend><button type="button" class="past-shows-toggle" data-past-shows-toggle role="switch" aria-checked="false" aria-label="Show past shows"><span class="past-shows-track" aria-hidden="true"><i></i></span><span>Past Shows</span><b>Off</b></button><select class="past-location-select" data-past-location-select aria-label="Choose a past show location" hidden><option value="">Choose a past location…</option></select></fieldset></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming and past shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list" tabindex="0" role="region" aria-label="Upcoming show dates. On touch screens, start with two fingers to scroll this list."><p class="eyebrow gold">Upcoming Dates</p><p class="show-scroll-hint"><span aria-hidden="true">↕</span> Start with two fingers to scroll show dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
+  '<section id="shows" class="section show-map"><div class="show-map-heading"><p class="eyebrow gold">Live Shows</p><h2>Where we’re playing.</h2><p>Approved dates from our artists appear here automatically.</p></div><div class="map-filter-groups"><fieldset class="map-filter-group"><legend>Artists</legend><div class="artist-filters" aria-label="Filter map by artist"><label><input type="checkbox" data-artist-filter="anthony-segovia" checked><span></span>Anthony Segovia</label><label><input type="checkbox" data-artist-filter="the-traynr-band" checked><span></span>The Traynr Band</label><label><input type="checkbox" data-artist-filter="briella-steiner" checked><span></span>Briella Steiner</label><label><input type="checkbox" data-artist-filter="the-wicked" checked><span></span>The Wicked</label><label><input type="checkbox" data-artist-filter="anyone-else" checked><span></span>Anyone Else</label><label><input type="checkbox" data-artist-filter="die-tired" checked><span></span>Die Tired</label><label><input type="checkbox" data-artist-filter="jackson-wayne" checked><span></span>Jackson Wayne</label></div></fieldset><fieldset class="map-filter-group history-filter"><legend>History</legend><button type="button" class="past-shows-toggle" data-past-shows-toggle role="switch" aria-checked="false" aria-label="Show past shows"><span class="past-shows-track" aria-hidden="true"><i></i></span><span>Past Shows</span><b>Off</b></button><select class="past-location-select" data-past-location-select aria-label="Choose a past show location" hidden><option value="">Choose a past location…</option></select></fieldset></div><div class="map-layout"><div class="map-canvas"><div id="live-show-map" class="live-show-map" aria-label="Interactive map of upcoming and past shows"></div><div class="map-empty"><strong>Loading dates…</strong><span>Checking the latest approved shows.</span></div></div><div class="show-list" tabindex="0" role="region" aria-label="Upcoming show dates. On touch screens, start with two fingers to scroll this list."><p class="eyebrow gold">Upcoming Dates</p><p class="show-scroll-hint"><span aria-hidden="true">↕</span> Start with two fingers to scroll show dates</p><div class="show-dates" aria-live="polite"></div></div></div></section>';
 const SHOWS_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbzm7n06SI-AROY0SVsnnyTH-CJuevgodlFKZj2A1aPZCZ-5k6Fff1TEYCyvrjSq0ZY6/exec';
 const venueGroupTestEnabled =
@@ -416,6 +416,7 @@ const artistSlugs = {
   'The Wicked': 'the-wicked',
   'Anyone Else': 'anyone-else',
   'Die Tired': 'die-tired',
+  'Jackson Wayne': 'jackson-wayne',
 };
 const mapEmpty = document.querySelector('.map-empty');
 const showDates = document.querySelector('.show-dates');
@@ -839,6 +840,8 @@ const markerColorExpression = [
   '#9b5de5',
   'die-tired',
   '#43a66b',
+  'jackson-wayne',
+  '#e28b42',
   'anthony-segovia',
   '#4da3ff',
   '#9386a3',

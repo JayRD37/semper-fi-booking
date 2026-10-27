@@ -2002,6 +2002,9 @@ footer {
 .artist-filters input[data-artist-filter='anthony-segovia']:checked + span {
   --filter-color: #4da3ff;
 }
+.artist-filters input[data-artist-filter='jackson-wayne']:checked + span {
+  --filter-color: #e28b42;
+}
 .artist-filters label:has(input:focus-visible) {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
@@ -2236,6 +2239,9 @@ footer {
 .semper-map-marker[data-artist='anthony-segovia'] {
   --marker-color: #4da3ff;
 }
+.semper-map-marker[data-artist='jackson-wayne'] {
+  --marker-color: #e28b42;
+}
 .semper-map-marker[data-artist='multiple'] {
   --marker-color: #d8dde0;
 }
@@ -2328,6 +2334,9 @@ footer {
 }
 .venue-popup li:has([data-artist='anthony-segovia']) {
   --artist-color: #4da3ff;
+}
+.venue-popup li:has([data-artist='jackson-wayne']) {
+  --artist-color: #e28b42;
 }
 .venue-popup li.ticker-focused-show {
   background: rgb(212 175 55 / 8%);
